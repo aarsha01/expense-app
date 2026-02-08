@@ -5,12 +5,11 @@ import { MonthData } from '@/types';
 import {
   calculatePeriodMonths,
   exportToCSV,
-  PERIOD_1_SALARY,
-  PERIOD_2_SALARY,
 } from '@/utils/calculations';
 import { useExpenseData } from '@/hooks/useExpenseData';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import Header from '@/components/Header';
 import MonthCard from '@/components/MonthCard';
 import PeriodSummary from '@/components/PeriodSummary';
@@ -20,15 +19,13 @@ import CurrentMonthSummary from '@/components/CurrentMonthSummary';
 import AuthForm from '@/components/AuthForm';
 import { Loader2 } from 'lucide-react';
 
-// Get current year and start from February
-const CURRENT_YEAR = new Date().getFullYear();
-const START_MONTH = 1; // February (0-indexed)
 const CURRENT_MONTH = new Date().getMonth(); // 0-indexed current month
 
 type TabType = 'period1' | 'period2' | 'goals';
 
 export default function Home() {
   const { user, isLoading: authLoading, signOut } = useAuth();
+  const { settings, isLoading: settingsLoading } = useSettings();
 
   // Use the expense data hook with authenticated user ID
   const {
@@ -61,7 +58,7 @@ export default function Home() {
   }, [darkMode]);
 
   // Show auth loading state
-  if (authLoading) {
+  if (authLoading || settingsLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -89,8 +86,8 @@ export default function Home() {
 
   // Find current month in the data
   const getCurrentMonthData = () => {
-    const period1StartMonth = START_MONTH;
-    const period1EndMonth = START_MONTH + 5;
+    const period1StartMonth = settings.startMonth;
+    const period1EndMonth = settings.startMonth + settings.monthsPerPeriod - 1;
 
     if (CURRENT_MONTH >= period1StartMonth && CURRENT_MONTH <= period1EndMonth) {
       const idx = CURRENT_MONTH - period1StartMonth;
@@ -136,7 +133,7 @@ export default function Home() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `expense-tracker-${CURRENT_YEAR}.csv`);
+    link.setAttribute('download', `expense-tracker-${settings.startYear}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -178,6 +175,7 @@ export default function Home() {
         lastSaved={lastSaved}
         error={error}
         hasUnsavedChanges={hasUnsavedChanges}
+        currencySymbol={settings.currencySymbol}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -211,9 +209,9 @@ export default function Home() {
               }`}
             >
               <div className="flex flex-col items-center">
-                <span className="text-sm sm:text-base font-semibold">First 6 Months</span>
+                <span className="text-sm sm:text-base font-semibold">{settings.period1Name}</span>
                 <span className="text-xs opacity-75 hidden sm:block">
-                  Feb - Jul {CURRENT_YEAR}
+                  {settings.currencySymbol}{settings.period1Salary.toLocaleString()}/mo
                 </span>
               </div>
             </button>
@@ -227,9 +225,9 @@ export default function Home() {
               }`}
             >
               <div className="flex flex-col items-center">
-                <span className="text-sm sm:text-base font-semibold">Next 6 Months</span>
+                <span className="text-sm sm:text-base font-semibold">{settings.period2Name}</span>
                 <span className="text-xs opacity-75 hidden sm:block">
-                  Aug - Jan {CURRENT_YEAR + 1}
+                  {settings.currencySymbol}{settings.period2Salary.toLocaleString()}/mo
                 </span>
               </div>
             </button>
@@ -247,12 +245,12 @@ export default function Home() {
                   <span className="text-sm sm:text-base font-semibold">Goals</span>
                   {totalGoalContribution > 0 && (
                     <span className="bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                      {Math.round(totalGoalContribution / 3000)}%
+                      {Math.round((totalGoalContribution / settings.goalTarget) * 100)}%
                     </span>
                   )}
                 </div>
                 <span className="text-xs opacity-75 hidden sm:block">
-                  3 Lakh Target
+                  {settings.currencySymbol}{settings.goalTarget.toLocaleString()}
                 </span>
               </div>
             </button>
@@ -270,8 +268,9 @@ export default function Home() {
             {/* Summary */}
             <PeriodSummary
               months={calculatedPeriod1}
-              periodName="First 6 Months"
-              salary={PERIOD_1_SALARY}
+              periodName={settings.period1Name}
+              salary={settings.period1Salary}
+              currencySymbol={settings.currencySymbol}
             />
 
             {/* Chart */}
@@ -318,17 +317,20 @@ export default function Home() {
             )}
 
             {/* Salary Change Notice */}
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                <span className="font-medium">Note:</span> Monthly salary reduces to ¥180,000 (from ¥190,000) starting this period.
-              </p>
-            </div>
+            {settings.period1Salary !== settings.period2Salary && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  <span className="font-medium">Note:</span> Monthly salary changes to {settings.currencySymbol}{settings.period2Salary.toLocaleString()} (from {settings.currencySymbol}{settings.period1Salary.toLocaleString()}) in this period.
+                </p>
+              </div>
+            )}
 
             {/* Summary */}
             <PeriodSummary
               months={calculatedPeriod2WithCarryover}
-              periodName="Next 6 Months"
-              salary={PERIOD_2_SALARY}
+              periodName={settings.period2Name}
+              salary={settings.period2Salary}
+              currencySymbol={settings.currencySymbol}
             />
 
             {/* Chart */}

@@ -1,6 +1,7 @@
 'use client';
 
-import { Moon, Sun, Download, Cloud, CloudOff, Loader2, Check, Save, LogOut, User } from 'lucide-react';
+import Link from 'next/link';
+import { Moon, Sun, Download, Cloud, CloudOff, Loader2, Check, Save, LogOut, User, Settings } from 'lucide-react';
 
 interface HeaderProps {
   darkMode: boolean;
@@ -14,6 +15,7 @@ interface HeaderProps {
   lastSaved?: Date | null;
   error?: string | null;
   hasUnsavedChanges?: boolean;
+  currencySymbol?: string;
 }
 
 export default function Header({
@@ -28,6 +30,7 @@ export default function Header({
   lastSaved = null,
   error = null,
   hasUnsavedChanges = false,
+  currencySymbol = '¥',
 }: HeaderProps) {
   const formatLastSaved = (date: Date | null) => {
     if (!date) return null;
@@ -48,7 +51,7 @@ export default function Header({
         <div className="flex items-center justify-between h-14 sm:h-16">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-base sm:text-lg font-bold">¥</span>
+              <span className="text-white text-base sm:text-lg font-bold">{currencySymbol}</span>
             </div>
             <div className="min-w-0">
               <h1 className="text-base sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
@@ -122,6 +125,16 @@ export default function Header({
               <Download size={16} />
               <span className="hidden sm:inline">Export CSV</span>
             </button>
+
+            {/* Settings Button */}
+            <Link
+              href="/settings"
+              className="p-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <Settings size={18} />
+            </Link>
 
             <button
               onClick={onToggleDarkMode}

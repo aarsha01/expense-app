@@ -1,7 +1,24 @@
 'use client';
 
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { SettingsProvider } from '@/contexts/SettingsContext';
+import { ReactNode } from 'react';
 
-export default function Providers({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+function SettingsWrapper({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  return (
+    <SettingsProvider userId={user?.id}>
+      {children}
+    </SettingsProvider>
+  );
+}
+
+export default function Providers({ children }: { children: ReactNode }) {
+  return (
+    <AuthProvider>
+      <SettingsWrapper>
+        {children}
+      </SettingsWrapper>
+    </AuthProvider>
+  );
 }

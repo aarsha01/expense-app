@@ -1,16 +1,18 @@
 'use client';
 
 import { CalculatedMonth } from '@/types';
-import { formatCurrency, PLANNED_LONG_TERM_SAVINGS, PLANNED_SHORT_TERM_SAVINGS } from '@/utils/calculations';
+import { PLANNED_LONG_TERM_SAVINGS, PLANNED_SHORT_TERM_SAVINGS } from '@/utils/calculations';
 import { Wallet, PiggyBank, TrendingUp, Target } from 'lucide-react';
 
 interface PeriodSummaryProps {
   months: CalculatedMonth[];
   periodName: string;
   salary: number;
+  currencySymbol?: string;
 }
 
-export default function PeriodSummary({ months, periodName, salary }: PeriodSummaryProps) {
+export default function PeriodSummary({ months, periodName, salary, currencySymbol = '¥' }: PeriodSummaryProps) {
+  const formatAmount = (amount: number) => `${currencySymbol}${amount.toLocaleString()}`;
   const totalSalary = months.reduce((sum, m) => sum + m.salary, 0);
   const totalAdditionalIncome = months.reduce((sum, m) => sum + m.additionalIncome, 0);
 
@@ -29,32 +31,32 @@ export default function PeriodSummary({ months, periodName, salary }: PeriodSumm
     {
       icon: Wallet,
       label: 'Total Income',
-      value: formatCurrency(totalSalary + totalAdditionalIncome),
-      detail: `${months.length} months @ ${formatCurrency(salary)}/mo`,
+      value: formatAmount(totalSalary + totalAdditionalIncome),
+      detail: `${months.length} months @ ${formatAmount(salary)}/mo`,
       color: 'text-primary-600 dark:text-primary-400',
       bgColor: 'bg-primary-50 dark:bg-primary-900/20',
     },
     {
       icon: PiggyBank,
       label: 'Long-term Savings',
-      value: formatCurrency(totalLongTermSavings),
-      detail: `${longTermDiff >= 0 ? '+' : ''}${formatCurrency(longTermDiff)} vs target`,
+      value: formatAmount(totalLongTermSavings),
+      detail: `${longTermDiff >= 0 ? '+' : ''}${formatAmount(longTermDiff)} vs target`,
       color: longTermDiff >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
     },
     {
       icon: TrendingUp,
       label: 'Short-term Savings',
-      value: formatCurrency(totalShortTermSavings),
-      detail: `${shortTermDiff >= 0 ? '+' : ''}${formatCurrency(shortTermDiff)} vs target`,
+      value: formatAmount(totalShortTermSavings),
+      detail: `${shortTermDiff >= 0 ? '+' : ''}${formatAmount(shortTermDiff)} vs target`,
       color: shortTermDiff >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400',
       bgColor: 'bg-purple-50 dark:bg-purple-900/20',
     },
     {
       icon: Target,
       label: 'Goal Fund',
-      value: formatCurrency(totalGoalContribution),
-      detail: totalSurplus >= 0 ? `Surplus: ${formatCurrency(totalSurplus)}` : `Deficit: ${formatCurrency(Math.abs(totalSurplus))}`,
+      value: formatAmount(totalGoalContribution),
+      detail: totalSurplus >= 0 ? `Surplus: ${formatAmount(totalSurplus)}` : `Deficit: ${formatAmount(Math.abs(totalSurplus))}`,
       color: 'text-amber-600 dark:text-amber-400',
       bgColor: 'bg-amber-50 dark:bg-amber-900/20',
     },
