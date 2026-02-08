@@ -2,15 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { MonthData } from '@/types';
+import { UserSettings, DEFAULT_SETTINGS } from '@/types/settings';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
-import {
-  generateInitialMonths,
-  PERIOD_1_SALARY,
-  PERIOD_2_SALARY,
-} from '@/utils/calculations';
-
-const CURRENT_YEAR = new Date().getFullYear();
-const START_MONTH = 1; // February
+import { generateInitialMonths } from '@/utils/calculations';
 
 // Type for database row
 interface ExpenseDataRow {
@@ -35,14 +29,17 @@ interface UseExpenseDataReturn {
   setPeriod2Months: (months: MonthData[] | ((prev: MonthData[]) => MonthData[])) => void;
   saveData: () => Promise<void>;
   loadFromDatabase: () => Promise<void>;
+  resetToSettings: () => void;
 }
 
-export function useExpenseData(userId?: string): UseExpenseDataReturn {
-  const [period1Months, setPeriod1MonthsState] = useState<MonthData[]>(
-    generateInitialMonths(START_MONTH, CURRENT_YEAR, 6, PERIOD_1_SALARY)
+export function useExpenseData(userId?: string, settings?: UserSettings): UseExpenseDataReturn {
+  const s = settings || DEFAULT_SETTINGS;
+
+  const [period1Months, setPeriod1MonthsState] = useState<MonthData[]>(() =>
+    generateInitialMonths(s.startMonth, s.startYear, s.monthsPerPeriod, s.period1Salary, s.fixedExpenses, s.longTermSavingsTarget, s.shortTermSavingsTarget)
   );
-  const [period2Months, setPeriod2MonthsState] = useState<MonthData[]>(
-    generateInitialMonths(START_MONTH + 6, CURRENT_YEAR, 6, PERIOD_2_SALARY)
+  const [period2Months, setPeriod2MonthsState] = useState<MonthData[]>(() =>
+    generateInitialMonths(s.startMonth + s.monthsPerPeriod, s.startYear, s.monthsPerPeriod, s.period2Salary, s.fixedExpenses, s.longTermSavingsTarget, s.shortTermSavingsTarget)
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -84,6 +81,14 @@ export function useExpenseData(userId?: string): UseExpenseDataReturn {
             setPeriod1MonthsState(row.period1_months);
             setPeriod2MonthsState(row.period2_months);
             setLastSaved(new Date(row.updated_at));
+          } else {
+            // No data exists, generate from settings
+            setPeriod1MonthsState(
+              generateInitialMonths(s.startMonth, s.startYear, s.monthsPerPeriod, s.period1Salary, s.fixedExpenses, s.longTermSavingsTarget, s.shortTermSavingsTarget)
+            );
+            setPeriod2MonthsState(
+              generateInitialMonths(s.startMonth + s.monthsPerPeriod, s.startYear, s.monthsPerPeriod, s.period2Salary, s.fixedExpenses, s.longTermSavingsTarget, s.shortTermSavingsTarget)
+            );
           }
         } else {
           // Load from localStorage (fallback for non-authenticated users)
@@ -113,7 +118,18 @@ export function useExpenseData(userId?: string): UseExpenseDataReturn {
     };
 
     loadData();
-  }, [userId]);
+  }, [userId, s.startMonth, s.startYear, s.monthsPerPeriod, s.period1Salary, s.period2Salary, s.fixedExpenses, s.longTermSavingsTarget, s.shortTermSavingsTarget]);
+
+  // Reset data to match current settings
+  const resetToSettings = useCallback(() => {
+    setPeriod1MonthsState(
+      generateInitialMonths(s.startMonth, s.startYear, s.monthsPerPeriod, s.period1Salary, s.fixedExpenses, s.longTermSavingsTarget, s.shortTermSavingsTarget)
+    );
+    setPeriod2MonthsState(
+      generateInitialMonths(s.startMonth + s.monthsPerPeriod, s.startYear, s.monthsPerPeriod, s.period2Salary, s.fixedExpenses, s.longTermSavingsTarget, s.shortTermSavingsTarget)
+    );
+    setHasUnsavedChanges(true);
+  }, [s]);
 
   // Save data (to localStorage always, to database if authenticated)
   const saveData = useCallback(async () => {
@@ -216,5 +232,6 @@ export function useExpenseData(userId?: string): UseExpenseDataReturn {
     setPeriod2Months,
     saveData,
     loadFromDatabase,
+    resetToSettings,
   };
 }

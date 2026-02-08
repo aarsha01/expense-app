@@ -69,7 +69,15 @@ export function getMonthName(monthIndex: number): string {
   return months[monthIndex % 12];
 }
 
-export function generateInitialMonths(startMonth: number, startYear: number, count: number, salary: number): MonthData[] {
+export function generateInitialMonths(
+  startMonth: number,
+  startYear: number,
+  count: number,
+  salary: number,
+  fixedExpenses: number = FIXED_EXPENSES,
+  longTermSavingsTarget: number = PLANNED_LONG_TERM_SAVINGS,
+  shortTermSavingsTarget: number = PLANNED_SHORT_TERM_SAVINGS
+): MonthData[] {
   const months: MonthData[] = [];
 
   for (let i = 0; i < count; i++) {
@@ -81,11 +89,11 @@ export function generateInitialMonths(startMonth: number, startYear: number, cou
       monthName: getMonthName(monthIndex),
       year,
       salary,
-      fixedExpenses: FIXED_EXPENSES,
-      plannedLongTermSavings: PLANNED_LONG_TERM_SAVINGS,
-      actualLongTermSavings: 0, // Start at 0, user will input actual saved amounts
-      plannedShortTermSavings: PLANNED_SHORT_TERM_SAVINGS,
-      actualShortTermSavings: 0, // Start at 0, user will input actual saved amounts
+      fixedExpenses: fixedExpenses,
+      plannedLongTermSavings: longTermSavingsTarget,
+      actualLongTermSavings: 0,
+      plannedShortTermSavings: shortTermSavingsTarget,
+      actualShortTermSavings: 0,
       additionalIncome: 0,
       additionalExpense: 0,
       goalContribution: 0,

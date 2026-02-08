@@ -17,7 +17,7 @@ import SavingsChart from '@/components/SavingsChart';
 import GoalsPanel from '@/components/GoalsPanel';
 import CurrentMonthSummary from '@/components/CurrentMonthSummary';
 import AuthForm from '@/components/AuthForm';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 const CURRENT_MONTH = new Date().getMonth(); // 0-indexed current month
 
@@ -27,7 +27,7 @@ export default function Home() {
   const { user, isLoading: authLoading, signOut } = useAuth();
   const { settings, isLoading: settingsLoading } = useSettings();
 
-  // Use the expense data hook with authenticated user ID
+  // Use the expense data hook with authenticated user ID and settings
   const {
     period1Months,
     period2Months,
@@ -40,7 +40,12 @@ export default function Home() {
     setPeriod1Months,
     setPeriod2Months,
     saveData,
-  } = useExpenseData(user?.id);
+    resetToSettings,
+  } = useExpenseData(user?.id, settings);
+
+  // Check if month data doesn't match settings (different month count or wrong months)
+  const dataMatchesSettings = period1Months.length === settings.monthsPerPeriod &&
+    period2Months.length === settings.monthsPerPeriod;
 
   // Dark mode
   const [darkMode, setDarkMode] = useLocalStorage<boolean>('expense-darkmode', false);
@@ -183,6 +188,28 @@ export default function Home() {
         {error && (
           <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
             <p className="text-sm text-amber-700 dark:text-amber-300">{error}</p>
+          </div>
+        )}
+
+        {/* Settings mismatch banner - show when data doesn't match settings */}
+        {!dataMatchesSettings && (
+          <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Your settings have changed. Click &quot;Reset Data&quot; to regenerate months based on new settings.
+              </p>
+              <button
+                onClick={() => {
+                  if (confirm('This will reset all your expense data to match your current settings. Continue?')) {
+                    resetToSettings();
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+              >
+                <RefreshCw size={16} />
+                Reset Data
+              </button>
+            </div>
           </div>
         )}
 
