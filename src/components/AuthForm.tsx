@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+
+type FormMode = 'login' | 'signup' | 'forgot';
 
 export default function AuthForm() {
-  const { signIn, signUp } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const { signIn, signUp, resetPassword } = useAuth();
+  const [mode, setMode] = useState<FormMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,20 +23,60 @@ export default function AuthForm() {
     setIsLoading(true);
 
     try {
-      if (isLogin) {
+      if (mode === 'login') {
         const { error } = await signIn(email, password);
         if (error) setError(error);
-      } else {
+      } else if (mode === 'signup') {
         const { error } = await signUp(email, password);
         if (error) {
           setError(error);
         } else {
-          setSuccess('Account created! Please check your email to verify your account.');
-          setIsLogin(true);
+          setSuccess('Account created successfully! You can now sign in.');
+          setMode('login');
+          setPassword('');
+        }
+      } else if (mode === 'forgot') {
+        const { error } = await resetPassword(email);
+        if (error) {
+          setError(error);
+        } else {
+          setSuccess('Password reset email sent! Check your inbox.');
         }
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const switchMode = (newMode: FormMode) => {
+    setMode(newMode);
+    setError(null);
+    setSuccess(null);
+    if (newMode === 'forgot') {
+      setPassword('');
+    }
+  };
+
+  const getTitle = () => {
+    switch (mode) {
+      case 'login': return 'Welcome back';
+      case 'signup': return 'Create account';
+      case 'forgot': return 'Reset password';
+    }
+  };
+
+  const getButtonText = () => {
+    if (isLoading) {
+      switch (mode) {
+        case 'login': return 'Signing in...';
+        case 'signup': return 'Creating account...';
+        case 'forgot': return 'Sending email...';
+      }
+    }
+    switch (mode) {
+      case 'login': return 'Sign in';
+      case 'signup': return 'Create account';
+      case 'forgot': return 'Send reset email';
     }
   };
 
@@ -56,9 +98,26 @@ export default function AuthForm() {
 
         {/* Form Card */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8">
+          {/* Back button for forgot password */}
+          {mode === 'forgot' && (
+            <button
+              onClick={() => switchMode('login')}
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4"
+            >
+              <ArrowLeft size={16} />
+              Back to sign in
+            </button>
+          )}
+
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-            {isLogin ? 'Welcome back' : 'Create account'}
+            {getTitle()}
           </h2>
+
+          {mode === 'forgot' && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Enter your email and we will send you a link to reset your password.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
@@ -73,7 +132,7 @@ export default function AuthForm() {
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    if (error) setError(null); // Clear error when user types
+                    if (error) setError(null);
                   }}
                   required
                   placeholder="you@example.com"
@@ -82,34 +141,49 @@ export default function AuthForm() {
               </div>
             </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (error) setError(null); // Clear error when user types
-                  }}
-                  required
-                  minLength={6}
-                  placeholder="Min 6 characters"
-                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                />
+            {/* Password - only show for login and signup */}
+            {mode !== 'forgot' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    required
+                    minLength={6}
+                    placeholder="Min 6 characters"
+                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Forgot Password Link - only show for login */}
+            {mode === 'login' && (
+              <div className="text-right">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => switchMode('forgot')}
+                  className="text-sm text-primary-500 hover:text-primary-600"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  Forgot password?
                 </button>
               </div>
-            </div>
+            )}
 
             {/* Error Message */}
             {error && (
@@ -131,33 +205,25 @@ export default function AuthForm() {
               disabled={isLoading}
               className="w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  {isLogin ? 'Signing in...' : 'Creating account...'}
-                </>
-              ) : (
-                isLogin ? 'Sign in' : 'Create account'
-              )}
+              {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+              {getButtonText()}
             </button>
           </form>
 
-          {/* Toggle */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {isLogin ? "Don't have an account?" : 'Already have an account?'}
-              <button
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError(null);
-                  setSuccess(null);
-                }}
-                className="ml-1 text-primary-500 hover:text-primary-600 font-medium"
-              >
-                {isLogin ? 'Sign up' : 'Sign in'}
-              </button>
-            </p>
-          </div>
+          {/* Toggle between login and signup */}
+          {mode !== 'forgot' && (
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+                <button
+                  onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
+                  className="ml-1 text-primary-500 hover:text-primary-600 font-medium"
+                >
+                  {mode === 'login' ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
