@@ -12,18 +12,6 @@ import {
 const CURRENT_YEAR = new Date().getFullYear();
 const START_MONTH = 1; // February
 
-// Generate a simple user ID for localStorage users (anonymous)
-const getOrCreateUserId = (): string => {
-  if (typeof window === 'undefined') return 'server';
-
-  let userId = localStorage.getItem('expense-user-id');
-  if (!userId) {
-    userId = 'user_' + Math.random().toString(36).substring(2, 15);
-    localStorage.setItem('expense-user-id', userId);
-  }
-  return userId;
-};
-
 // Type for database row
 interface ExpenseDataRow {
   id: string;
@@ -49,7 +37,7 @@ interface UseExpenseDataReturn {
   loadFromDatabase: () => Promise<void>;
 }
 
-export function useExpenseData(): UseExpenseDataReturn {
+export function useExpenseData(userId?: string): UseExpenseDataReturn {
   const [period1Months, setPeriod1MonthsState] = useState<MonthData[]>(
     generateInitialMonths(START_MONTH, CURRENT_YEAR, 6, PERIOD_1_SALARY)
   );
@@ -66,10 +54,10 @@ export function useExpenseData(): UseExpenseDataReturn {
 
   // Check if database is available (client-side only)
   useEffect(() => {
-    setUseDatabase(isSupabaseConfigured());
-  }, []);
+    setUseDatabase(isSupabaseConfigured() && !!userId);
+  }, [userId]);
 
-  // Load data on mount
+  // Load data on mount or when userId changes
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -79,9 +67,8 @@ export function useExpenseData(): UseExpenseDataReturn {
         const dbConfigured = isSupabaseConfigured();
         const supabase = getSupabase();
 
-        if (dbConfigured && supabase) {
-          // Load from Supabase
-          const userId = getOrCreateUserId();
+        if (dbConfigured && supabase && userId) {
+          // Load from Supabase using authenticated user ID
           const { data, error: fetchError } = await supabase
             .from('expense_data')
             .select('*')
@@ -99,7 +86,7 @@ export function useExpenseData(): UseExpenseDataReturn {
             setLastSaved(new Date(row.updated_at));
           }
         } else {
-          // Load from localStorage
+          // Load from localStorage (fallback for non-authenticated users)
           const stored1 = localStorage.getItem('expense-period1-v2');
           const stored2 = localStorage.getItem('expense-period2-v2');
 
@@ -126,23 +113,21 @@ export function useExpenseData(): UseExpenseDataReturn {
     };
 
     loadData();
-  }, []);
+  }, [userId]);
 
-  // Save data (to localStorage always, to database if configured)
+  // Save data (to localStorage always, to database if authenticated)
   const saveData = useCallback(async () => {
     setIsSaving(true);
     setError(null);
 
     try {
-      // Always save to localStorage
+      // Always save to localStorage as backup
       localStorage.setItem('expense-period1-v2', JSON.stringify(period1Months));
       localStorage.setItem('expense-period2-v2', JSON.stringify(period2Months));
 
-      // Save to database if configured
+      // Save to database if authenticated
       const supabase = getSupabase();
-      if (supabase) {
-        const userId = getOrCreateUserId();
-
+      if (supabase && userId) {
         const { error: upsertError } = await supabase
           .from('expense_data')
           .upsert({
@@ -168,18 +153,17 @@ export function useExpenseData(): UseExpenseDataReturn {
     } finally {
       setIsSaving(false);
     }
-  }, [period1Months, period2Months]);
+  }, [period1Months, period2Months, userId]);
 
   // Load from database (manual refresh)
   const loadFromDatabase = useCallback(async () => {
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase || !userId) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const userId = getOrCreateUserId();
       const { data, error: fetchError } = await supabase
         .from('expense_data')
         .select('*')
@@ -202,7 +186,7 @@ export function useExpenseData(): UseExpenseDataReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   // Track unsaved changes when data changes
   useEffect(() => {

@@ -10,12 +10,14 @@ import {
 } from '@/utils/calculations';
 import { useExpenseData } from '@/hooks/useExpenseData';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import MonthCard from '@/components/MonthCard';
 import PeriodSummary from '@/components/PeriodSummary';
 import SavingsChart from '@/components/SavingsChart';
 import GoalsPanel from '@/components/GoalsPanel';
 import CurrentMonthSummary from '@/components/CurrentMonthSummary';
+import AuthForm from '@/components/AuthForm';
 import { Loader2 } from 'lucide-react';
 
 // Get current year and start from February
@@ -26,7 +28,9 @@ const CURRENT_MONTH = new Date().getMonth(); // 0-indexed current month
 type TabType = 'period1' | 'period2' | 'goals';
 
 export default function Home() {
-  // Use the new expense data hook (supports both localStorage and Supabase)
+  const { user, isLoading: authLoading, signOut } = useAuth();
+
+  // Use the expense data hook with authenticated user ID
   const {
     period1Months,
     period2Months,
@@ -39,7 +43,7 @@ export default function Home() {
     setPeriod1Months,
     setPeriod2Months,
     saveData,
-  } = useExpenseData();
+  } = useExpenseData(user?.id);
 
   // Dark mode
   const [darkMode, setDarkMode] = useLocalStorage<boolean>('expense-darkmode', false);
@@ -55,6 +59,23 @@ export default function Home() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Show auth loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return <AuthForm />;
+  }
 
   // Calculate months with carryover
   const calculatedPeriod1 = calculatePeriodMonths(period1Months);
@@ -150,6 +171,8 @@ export default function Home() {
         onToggleDarkMode={toggleDarkMode}
         onExport={handleExport}
         onSave={saveData}
+        onSignOut={signOut}
+        userEmail={user.email}
         useDatabase={useDatabase}
         isSaving={isSaving}
         lastSaved={lastSaved}
@@ -347,9 +370,7 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-16 pb-8 text-center">
           <p className="text-sm text-gray-400 dark:text-gray-500">
-            {useDatabase
-              ? 'Data synced to cloud. Export to CSV for backup.'
-              : 'Data stored locally in your browser. Set up Supabase for cloud sync.'}
+            Signed in as {user.email}. Data synced to cloud.
           </p>
         </footer>
       </main>

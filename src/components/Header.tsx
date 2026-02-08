@@ -1,12 +1,14 @@
 'use client';
 
-import { Moon, Sun, Download, Cloud, CloudOff, Loader2, Check, Save } from 'lucide-react';
+import { Moon, Sun, Download, Cloud, CloudOff, Loader2, Check, Save, LogOut, User } from 'lucide-react';
 
 interface HeaderProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onExport: () => void;
   onSave: () => void;
+  onSignOut?: () => void;
+  userEmail?: string | null;
   useDatabase?: boolean;
   isSaving?: boolean;
   lastSaved?: Date | null;
@@ -19,6 +21,8 @@ export default function Header({
   onToggleDarkMode,
   onExport,
   onSave,
+  onSignOut,
+  userEmail = null,
   useDatabase = false,
   isSaving = false,
   lastSaved = null,
@@ -126,6 +130,26 @@ export default function Header({
             >
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+
+            {/* User Menu */}
+            {userEmail && onSignOut && (
+              <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-200 dark:border-gray-700 ml-1">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800">
+                  <User size={14} className="text-gray-500" />
+                  <span className="text-xs text-gray-600 dark:text-gray-400 max-w-[100px] truncate">
+                    {userEmail.split('@')[0]}
+                  </span>
+                </div>
+                <button
+                  onClick={onSignOut}
+                  className="p-2 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
