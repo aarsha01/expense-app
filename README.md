@@ -4,8 +4,8 @@ A modern, responsive web app to track monthly salary, savings, and expenses over
 
 ## Features
 
-- **Two 6-Month Periods** - Track expenses across Feb-Jul (¥190,000/month) and Aug-Jan (¥180,000/month)
-- **Savings Tracking** - Monitor long-term (¥120,000) and short-term (¥30,000) monthly savings targets
+- **Two 6-Month Periods** - Track expenses across Feb-Jul and Aug-Jan 
+- **Savings Tracking** - Monitor long-term and short-term  monthly savings targets
 - **Goal Fund** - Save towards a ¥300,000 goal for smartphone, travel, and moving expenses
 - **Auto Carryover** - Surplus from one month automatically carries to the next
 - **Visual Charts** - Bar charts showing monthly savings breakdown
@@ -135,10 +135,4 @@ src/
 4. **Save** - Click the Save button to persist your changes
 5. **Export** - Download your data as CSV for backup
 
-## License
 
-MIT
-
----
-
-Built with Next.js and Tailwind CSS
